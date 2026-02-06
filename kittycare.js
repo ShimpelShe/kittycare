@@ -13,7 +13,7 @@ var data;
 var kitties = [];
 var inventory = [];
 var money = 0;
-var filename = "kittycare_save";
+var filename = "devsave";
 var exitMsg = "";
 var uiSect = "init";
 
@@ -34,7 +34,23 @@ const furColors = {
   immortal: ["Angellic White", "Spirit Grey", "Demonic Black"],
   god: ["God Gold", "God White"],
 };
-const itemStats = {};
+// ["name", [+hunger, +power, +lust, +maxhunger], [[Extra status names], [Extra status day duration]]]
+const itemStats = [
+  ["cat food", [25, 0, 0, 0]],
+  ["dog food", [5, 0, 0, 0], [["identity crisis"], [2]]],
+  ["raw meat", [15, 0, 5, 0]],
+  ["horny kit's hershey kisses", [20, 0, 65, 0], [["horny"], [2]]],
+  ["ramses' flesh", [690, 20, 30, 30], [["violent"], [7]]],
+  [
+    "shimple's cake",
+    [69420, 42069, 21420, 42069],
+    [
+      ["wet", "horny"],
+      [99, 99],
+    ],
+  ],
+];
+
 const symbols = {
   ul: "\u{2554}",
   ur: "\u{2557}",
@@ -146,6 +162,7 @@ function kittyMenu() {
       nextDay();
       kittyMenu();
     } else if (filteredAns == "f" || filteredAns == "feed") {
+      feedMenu();
     } else if (filteredAns == "s" || filteredAns == "shop") {
     } else if (filteredAns == "m" || filteredAns == "menu") {
       fileMenu();
@@ -201,7 +218,31 @@ function nextDay() {
   }
 }
 
-function feedMenu() {}
+function feedMenu() {
+  console.log(
+    symbols["star"],
+    "Select a kitty [0" +
+      (kitties.length > 1 ? "-" + kitties.length : "") +
+      "]",
+  );
+  rl.question("| |> ", (kit) => {
+    kitties[kit].status = "battling";
+    kitties[kit].phase = 3;
+    rl.question(
+      `\nEnter difficulty\n [0-${kitties[kit].power / 4}] | |> `,
+      (dif) => {
+        kitties[kit].battleDif = Math.min(
+          kitties[kit].power / 4,
+          Math.max(0, dif),
+        );
+        console.log("Dificulty set to", kitties[kit].battleDif);
+        setTimeout(() => {
+          kittyMenu();
+        }, 800);
+      },
+    );
+  });
+}
 
 function filter(str) {
   return str.toLowerCase().replaceAll("/[^a-zA-Z]/", "");
