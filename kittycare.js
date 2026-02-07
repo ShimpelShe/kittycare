@@ -8,6 +8,7 @@ const rl = readline.createInterface({
   terminal: true,
 });
 
+// let's define it before anything, so it doesn't go local
 var data;
 
 var kitties = [];
@@ -17,6 +18,7 @@ var filename = "devsave";
 var exitMsg = "";
 var uiSect = "init";
 
+// here are thy fur colors for thee, they're beautiful
 const furColors = {
   common: [
     "White",
@@ -34,6 +36,7 @@ const furColors = {
   immortal: ["Angellic White", "Spirit Grey", "Demonic Black"],
   god: ["God Gold", "God White"],
 };
+// here are item definitions, that's my cake down there.. no, it's not the baked kind
 // ["name", [+hunger, +power, +lust, +maxhunger], [[Extra status names], [Extra status day duration]]]
 const itemStats = [
   ["cat food", [25, 0, 0, 0]],
@@ -51,6 +54,7 @@ const itemStats = [
   ],
 ];
 
+// here are some symbols, to fancy your ui's
 const symbols = {
   ul: "\u{2554}",
   ur: "\u{2557}",
@@ -63,23 +67,38 @@ const symbols = {
   cross: "\u{1F7AE}",
 };
 
+// Here's the kitty factory
 class kitty {
   constructor(name, age, hunger, maxhunger, power, lust) {
     this.name = name;
     this.age = age;
     this.hunger = hunger;
     this.maxhunger = maxhunger;
-    this.power = power;
+    this.rawPower = power;
+    // so, raw power is.. raw, without modifications, here we make changes so it's a bit less "static"
+    this.power =
+      rawpower -
+      (this.status.includes("wet") || this.status.includes("horny")
+        ? 20 / rawpower
+        : 0) -
+      // First, we lower their power if they're "wet" or "horny"
+      (this.maxhunger - this.hunger + this.lust) * 0.6 +
+      // Then we lower it further with the difference between their max hunger and hunger
+      // and their lust too
+      (this.status.includes("violent")
+        ? 3 + this.durations[this.status.indexOf("violent")] * 4
+        : 0);
+    // And finally, we add more if they're "violent"
     this.lust = lust;
-    this.status = "idle";
-    this.phase = 0;
+    this.status = [];
+    this.durations = [];
     this.battleDif = 0;
     while (!this.furcolor) {
       this.furcolor = furColor();
     }
   }
 }
-
+// Here we calculate the fur color of our little kitties
 function furColor() {
   return Math.random() < 0.1
     ? Math.random() < 0.1
@@ -87,25 +106,24 @@ function furColor() {
         ? Math.random() < 0.1
           ? Math.random() < 0.1
             ? furColors["god"][
-                Math.round(Math.random() * furColors["god"].length - 1)
+                Math.floor(Math.random() * furColors["god"].length)
               ]
             : furColors["immortal"][
-                Math.round(Math.random() * furColors["immortal"].length - 1)
+                Math.floor(Math.random() * furColors["immortal"].length)
               ]
           : furColors["super"][
-              Math.round(Math.random() * furColors["super"].length - 1)
+              Math.floor(Math.random() * furColors["super"].length)
             ]
         : furColors["epic"][
-            Math.round(Math.random() * furColors["epic"].length - 1)
+            Math.floor(Math.random() * furColors["epic"].length)
           ]
-      : furColors["rare"][
-          Math.round(Math.random() * furColors["rare"].length - 1)
-        ]
+      : furColors["rare"][Math.floor(Math.random() * furColors["rare"].length)]
     : furColors["common"][
-        Math.round(Math.random() * furColors["common"].length - 1)
+        Math.floor(Math.random() * furColors["common"].length)
       ];
 }
 
+// Init function
 function newGame() {
   kitties = [];
   inventory = [];
@@ -209,7 +227,7 @@ function nextDay() {
       if (kitties[i].phase != 0) {
         kitties[i].phase--;
       } else {
-        kitties[i].power += 10 + kitties[i].battleDif * 3;
+        kitties[i].rawpower += 10 + kitties[i].battleDif * 3;
         kitties[i].hunger -= Math.max(10, kitties[i].battleDif * 5);
         kitties[i].status = "idle";
       }
@@ -251,7 +269,8 @@ function filter(str) {
 function load(fn) {
   fs.readFile(fn + ".json", (e, d) => {
     if (e) {
-      throw e;
+      console.log("Couldn't find file " + fn + ".json");
+      newGame();
     } else {
       kitties = JSON.parse(d)[0];
       inventory = JSON.parse(d)[1];
