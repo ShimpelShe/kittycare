@@ -269,7 +269,7 @@ function feedMenu() {
   );
   let decided = false;
   rl.question("| |> ", (kit) => {
-    if (isNaN(kit) || kit.toString != null) {
+    if (isNaN(kit)) {
       kittyMenu();
       return;
     }
