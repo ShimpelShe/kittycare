@@ -37,15 +37,15 @@ const furColors = {
   god: ["God Gold", "God White"],
 };
 // here are item definitions, that's my cake down there.. no, it's not the baked kind
-// ["name", [+hunger, +power, +lust, +maxhunger], [[Extra status names], [Extra status day duration]]]
+// ["name"[12], [+hunger, +power, +lust, +maxhunger], [[Extra status names], [Extra status day duration]]]
 const itemStats = [
   ["cat food", [25, 0, 0, 0]],
   ["dog food", [5, 0, 0, 0], [["identity crisis"], [2]]],
   ["raw meat", [15, 0, 5, 0]],
-  ["horny kit's hershey kisses", [20, 0, 65, 0], [["horny"], [2]]],
-  ["ramses' flesh", [690, 20, 30, 30], [["violent"], [7]]],
+  ["love kisses", [20, 0, 65, 0], [["horny"], [2]]],
+  ["burn! soup", [690, 20, 30, 30], [["violent"], [7]]],
   [
-    "shimple's cake",
+    "shimp's cake",
     [69420, 42069, 21420, 42069],
     [
       ["wet", "horny"],
@@ -75,27 +75,38 @@ class kitty {
     this.hunger = hunger;
     this.maxhunger = maxhunger;
     this.rawPower = power;
+    this.lust = lust;
+    this.status = [];
+    this.durations = [];
+    this.battleDif = 0;
     // so, raw power is.. raw, without modifications, here we make changes so it's a bit less "static"
     this.power =
-      rawpower -
-      (this.status.includes("wet") || this.status.includes("horny")
-        ? 20 / rawpower
+      this.rawPower -
+      (this.status.indexOf("wet") != -1 || this.status.indexOf("horny") != -1
+        ? 20 / this.rawPower
         : 0) -
       // First, we lower their power if they're "wet" or "horny"
       (this.maxhunger - this.hunger + this.lust) * 0.6 +
       // Then we lower it further with the difference between their max hunger and hunger
       // and their lust too
-      (this.status.includes("violent")
+      (this.status.indexOf("violent") != -1
         ? 3 + this.durations[this.status.indexOf("violent")] * 4
         : 0);
     // And finally, we add more if they're "violent"
-    this.lust = lust;
-    this.status = [];
-    this.durations = [];
-    this.battleDif = 0;
     while (!this.furcolor) {
       this.furcolor = furColor();
     }
+  }
+  recalculate() {
+    this.power =
+      this.rawPower -
+      (this.status.indexOf("wet") != -1 || this.status.indexOf("horny") != -1
+        ? 20 / this.rawPower
+        : 0) -
+      (this.maxhunger - this.hunger + this.lust) * 0.6 +
+      (this.status.indexOf("violent") != -1
+        ? 3 + this.durations[this.status.indexOf("violent")] * 4
+        : 0);
   }
 }
 // Here we calculate the fur color of our little kitties
@@ -143,13 +154,13 @@ function kittyMenu() {
   console.log(symbols["lr"]);
   for (let i = 0; i < kitties.length; i++) {
     console.log(
-      `${symbols["lr"]}${i + 1}${kitties[i].status == "idle" ? symbols["star"] : symbols["circledCross"]}> ${kitties[i].name}, ${kitties[i].age} ${kitties[i].age == 1 ? "day" : "days"} old`,
+      `${symbols["lr"]}${i + 1}${kitties[i].status.indexOf("battling") == -1 ? symbols["star"] : symbols["circledCross"]}> ${kitties[i].name}, ${kitties[i].age} ${kitties[i].age == 1 ? "day" : "days"} old`,
     );
     console.log(
       `${symbols["lr"]}${" ".repeat(i.toString().length)}${symbols["ul"]}  hunger: ${kitties[i].hunger}/${kitties[i].maxhunger}`,
     );
     console.log(
-      `${symbols["lr"]}${" ".repeat(i.toString().length)}${symbols["lr"]}  power: ${kitties[i].power}`,
+      `${symbols["lr"]}${" ".repeat(i.toString().length)}${symbols["lr"]}  power: ${kitties[i].power} (${kitties[i].rawPower})`,
     );
     console.log(
       `${symbols["lr"]}${" ".repeat(i.toString().length)}${symbols["dl"]}  lust: ${kitties[i].lust}`,
@@ -201,35 +212,48 @@ function toBattle() {
       "]",
   );
   rl.question("| |> ", (kit) => {
-    kitties[kit].status = "battling";
-    kitties[kit].phase = 3;
-    rl.question(
-      `\nEnter difficulty\n [0-${kitties[kit].power / 4}] | |> `,
-      (dif) => {
-        kitties[kit].battleDif = Math.min(
-          kitties[kit].power / 4,
-          Math.max(0, dif),
-        );
-        console.log("Dificulty set to", kitties[kit].battleDif);
-        setTimeout(() => {
-          kittyMenu();
-        }, 800);
-      },
-    );
+    if (kitties[kit].status.indexOf("battling") != -1) {
+      console.log(symbols["star"], "This kitty is already battling!");
+      setTimeout(() => {
+        kittyMenu();
+      }, 800);
+    } else if (kitties[kit].hunger < Math.max(15, kitties[kit].battleDif * 5)) {
+      console.log(symbols["star"], "This kitty is too hungry to battle!");
+      setTimeout(() => {
+        kittyMenu();
+      }, 800);
+    } else {
+      kitties[kit].status.push("battling");
+      kitties[kit].durations.push(3);
+      rl.question(
+        `\nEnter difficulty\n [0-${kitties[kit].power / 4}] | |> `,
+        (dif) => {
+          kitties[kit].battleDif = Math.min(
+            kitties[kit].power / 4,
+            Math.max(0, dif),
+          );
+          console.log("Dificulty set to", kitties[kit].battleDif);
+          setTimeout(() => {
+            kittyMenu();
+          }, 800);
+        },
+      );
+    }
   });
 }
 
 function nextDay() {
   for (let i = 0; i < kitties.length; i++) {
-    if (kitties[i].status == "idle") {
+    if (kitties[i].status.indexOf("battling") == -1) {
       kitties[i].hunger -= 5;
-    } else if (kitties[i].status == "battling") {
-      if (kitties[i].phase != 0) {
-        kitties[i].phase--;
+    } else if (kitties[i].status.indexOf("battling") != -1) {
+      if (kitties[i].durations[kitties[i].status.indexOf("battling")] != 0) {
+        kitties[i].durations[kitties[i].status.indexOf("battling")]--;
       } else {
-        kitties[i].rawpower += 10 + kitties[i].battleDif * 3;
+        kitties[i].rawPower += 10 + kitties[i].battleDif * 3;
+        kitties[i].recalculate();
         kitties[i].hunger -= Math.max(10, kitties[i].battleDif * 5);
-        kitties[i].status = "idle";
+        kitties[i].status.splice(kitties[i].status.indexOf("battling"), 1);
       }
     }
     kitties[i].age++;
@@ -241,24 +265,30 @@ function feedMenu() {
     symbols["star"],
     "Select a kitty [0" +
       (kitties.length > 1 ? "-" + kitties.length : "") +
-      "]",
+      "], or [ANY LETTER] to return to menu",
   );
+  let decided = false;
   rl.question("| |> ", (kit) => {
-    kitties[kit].status = "battling";
-    kitties[kit].phase = 3;
-    rl.question(
-      `\nEnter difficulty\n [0-${kitties[kit].power / 4}] | |> `,
-      (dif) => {
-        kitties[kit].battleDif = Math.min(
-          kitties[kit].power / 4,
-          Math.max(0, dif),
-        );
-        console.log("Dificulty set to", kitties[kit].battleDif);
-        setTimeout(() => {
-          kittyMenu();
-        }, 800);
-      },
-    );
+    if (isNaN(kit) || kit.toString != null) {
+      kittyMenu();
+      return;
+    }
+    if (kitties[kit].status.indexOf("battling") != -1) {
+      console.log(symbols["star"], "This kitty is in battle!");
+      setTimeout(() => {
+        kittyMenu();
+      }, 800);
+    } else {
+      kitties[kit].hunger = Math.min(
+        kitties[kit].maxhunger,
+        kitties[kit].hunger + 25,
+      );
+      decided = true;
+      console.log(symbols["star"], "You fed", kitties[kit].name);
+      setTimeout(() => {
+        kittyMenu();
+      }, 800);
+    }
   });
 }
 
